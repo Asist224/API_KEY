@@ -3913,10 +3913,23 @@ stopMonitoring() {
     async fetchWithRetry(url, options = {}, maxRetries = 3) {
         let lastError;
 
-        // Добавляем API ключ в заголовки ТОЛЬКО для n8n webhook запросов
+        // Добавляем API ключ в заголовки ТОЛЬКО для webhook запросов из конфига
         // (внешние API типа ipapi.co не принимают кастомные заголовки - CORS)
         const apiKey = window.GlobalConfigSettings?.apiKey;
-        const isWebhookUrl = url.includes('n8n.') || url.includes('/webhook');
+
+        // Получаем домен webhook'ов из конфига (aiCoreUrl или первый GDPR webhook)
+        const webhookBaseUrl = window.GlobalConfigSettings?.aiCoreUrl ||
+                               window.GlobalConfigSettings?.gdpr?.webhooks?.consent || '';
+        let webhookOrigin = '';
+        try {
+            if (webhookBaseUrl) {
+                webhookOrigin = new URL(webhookBaseUrl).origin;
+            }
+        } catch (e) { /* игнорируем ошибки парсинга */ }
+
+        // Проверяем, принадлежит ли URL к нашим webhook'ам
+        const isWebhookUrl = webhookOrigin && url.startsWith(webhookOrigin);
+
         const modifiedOptions = {
             ...options,
             headers: {
