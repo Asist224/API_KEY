@@ -1,0 +1,219 @@
+{
+  "name": "My workflow 14",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat-monitoring",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        80
+      ],
+      "id": "52502d62-e66f-486d-884d-d79bee7675c5",
+      "name": "Webhook",
+      "webhookId": "eb90ca04-d6ee-45f7-aada-b9b996978901"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем входные данные\nconst webhook = items[0].json;\n\n// Извлекаем данные мониторинга из тела запроса\nconst inputData = webhook.body || webhook;\n\n// ВАЖНО: Генерируем временные метки ЗДЕСЬ, в момент получения данных\nconst currentTime = new Date();\nconst currentTimeISO = currentTime.toISOString();\n\n// Создаем чистый объект для БД\nconst monitoringData = {\n    // Основные идентификаторы\n    recordId: `${inputData.sessionId}_${Date.now()}`,\n    recordTimestamp: currentTimeISO,\n    session_id: inputData.sessionId,\n    user_id: inputData.userId,\n    user_name: inputData.userName,\n    config_name: inputData.configName,\n    platform: inputData.platform,\n    \n    // Временные метки - ВСЕГДА используем текущее время сервера\n    timestamp: currentTimeISO,\n    session_start_time: currentTimeISO,\n    last_activity_time: currentTimeISO,\n    session_duration: inputData.sessionDuration || 0,\n    \n    // Данные о событии\n    event_type: inputData.eventType || 'activity',\n    message_count: inputData.messageCount || 0,\n    \n    // Данные о пользователе\n    current_language: inputData.currentLanguage || 'ru',\n    is_minimized: inputData.isMinimized || false,\n    user_agent: inputData.userAgent || '',\n    screen_resolution: inputData.screenResolution || '',\n    language: inputData.language || '',\n    timezone: inputData.timezone || '',\n    referrer: inputData.referrer || '',\n    current_url: inputData.currentUrl || '',\n    domain: inputData.domain || '',\n    \n    // Геоданные\n    geo_ip: inputData.geo?.ip || 'Unknown',\n    geo_country: inputData.geo?.country || 'Unknown',\n    geo_city: inputData.geo?.city || 'Unknown',\n    geo_region: inputData.geo?.region || 'Unknown',\n    geo_latitude: inputData.geo?.latitude || null,\n    geo_longitude: inputData.geo?.longitude || null\n};\n\n// Отладка для проверки\nconsole.log(`[${monitoringData.platform}] Activity recorded at:`, currentTimeISO);\n\nreturn [{json: monitoringData}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1a2c572b-41f6-4cf2-892e-3243798894e3",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"success\",\n  \"message\": \"Data saved\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        448,
+        0
+      ],
+      "id": "1724d1f3-eca6-4295-96b6-9e70800e195e",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO webchat_monitoring (\n    record_id, record_timestamp, session_id, user_id, user_name,\n    config_name, platform, timestamp, session_start_time, \n    last_activity_time, session_duration, event_type, message_count,\n    current_language, is_minimized, user_agent, screen_resolution,\n    language, timezone, referrer, current_url, domain,\n    geo_ip, geo_country, geo_city, geo_region, geo_latitude, geo_longitude\n)\nVALUES (\n    '{{ $json.recordId }}',\n    '{{ $json.recordTimestamp }}',\n    '{{ $json.session_id }}',\n    '{{ $json.user_id }}',\n    '{{ $json.user_name }}',\n    '{{ $json.config_name }}',\n    '{{ $json.platform }}',\n    '{{ $json.timestamp }}',\n    '{{ $json.session_start_time }}',\n    '{{ $json.last_activity_time }}',\n    {{ $json.session_duration }},\n    '{{ $json.event_type }}',\n    {{ $json.message_count }},\n    '{{ $json.current_language }}',\n    {{ $json.is_minimized }},\n    '{{ $json.user_agent }}',\n    '{{ $json.screen_resolution }}',\n    '{{ $json.language }}',\n    '{{ $json.timezone }}',\n    '{{ $json.referrer }}',\n    '{{ $json.current_url }}',\n    '{{ $json.domain }}',\n    '{{ $json.geo_ip }}',\n    '{{ $json.geo_country }}',\n    '{{ $json.geo_city }}',\n    '{{ $json.geo_region }}',\n    {{ $json.geo_latitude || 'NULL' }},\n    {{ $json.geo_longitude || 'NULL' }}\n)\nON CONFLICT (session_id) \nDO UPDATE SET\n    config_name = EXCLUDED.config_name,\n    platform = EXCLUDED.platform,\n    last_activity_time = EXCLUDED.last_activity_time,\n    session_duration = EXTRACT(EPOCH FROM (EXCLUDED.last_activity_time::timestamp - webchat_monitoring.session_start_time::timestamp))::integer,\n    -- ВАЖНО: НЕ увеличиваем message_count в таблице мониторинга\n    -- Реальное количество сообщений берем из таблиц диалогов\n    message_count = webchat_monitoring.message_count,\n    current_language = EXCLUDED.current_language,\n    is_minimized = EXCLUDED.is_minimized,\n    geo_ip = EXCLUDED.geo_ip,\n    geo_country = EXCLUDED.geo_country,\n    geo_city = EXCLUDED.geo_city,\n    geo_region = EXCLUDED.geo_region,\n    geo_latitude = EXCLUDED.geo_latitude,\n    geo_longitude = EXCLUDED.geo_longitude,\n    event_type = EXCLUDED.event_type,\n    user_id = CASE \n        WHEN webchat_monitoring.user_id IS NULL OR webchat_monitoring.user_id = '' \n        THEN EXCLUDED.user_id \n        ELSE webchat_monitoring.user_id \n    END,\n    user_name = CASE \n        WHEN webchat_monitoring.user_name IS NULL OR webchat_monitoring.user_name = '' \n        THEN EXCLUDED.user_name \n        ELSE webchat_monitoring.user_name \n    END\nRETURNING *;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        224,
+        0
+      ],
+      "id": "5b9dd077-90df-402b-a449-007e3a02092c",
+      "name": "Insert or update rows in a table1",
+      "credentials": {
+        "postgres": {
+          "id": "dPjh4Kdb4nIbCTQG",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// УНИВЕРСАЛЬНАЯ ЗАЩИТА: API KEY + RATE LIMITING\n// ============================================\n\n// НАСТРОЙКИ (измени под себя)\nconst API_KEY = '24fs-$r4d-defd-77ds-7eds';\nconst RATE_LIMIT_WINDOW_MS = 60000;\nconst RATE_LIMIT_MAX_REQUESTS = 60;\n\nconst inputData = $input.first().json;\nconst body = inputData.body || {};\nconst headers = inputData.headers || {};\nconst query = inputData.query || {};\nconst clientIP = headers['x-real-ip'] || headers['x-forwarded-for'] || headers['cf-connecting-ip'] || 'unknown';\nconst now = Date.now();\n\n// RATE LIMITING\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.rateLimits) { staticData.rateLimits = {}; }\nfor (const ip in staticData.rateLimits) {\n  if (now - staticData.rateLimits[ip].firstRequest > RATE_LIMIT_WINDOW_MS) {\n    delete staticData.rateLimits[ip];\n  }\n}\nif (!staticData.rateLimits[clientIP]) {\n  staticData.rateLimits[clientIP] = { count: 1, firstRequest: now };\n} else {\n  staticData.rateLimits[clientIP].count++;\n  if (staticData.rateLimits[clientIP].count > RATE_LIMIT_MAX_REQUESTS) {\n    return [{ json: { ...inputData, authorized: false, error: { success: false, error: 'Too many requests', details: `Limit: ${RATE_LIMIT_MAX_REQUESTS} requests per minute`, status: 429, retryAfter: Math.ceil((staticData.rateLimits[clientIP].firstRequest + RATE_LIMIT_WINDOW_MS - now) / 1000) } } }];\n  }\n}\n\n// API KEY CHECK\nconst providedKey = headers['x-api-key'] || body.apiKey || query.apiKey || '';\nif (!providedKey) {\n  return [{ json: { ...inputData, authorized: false, error: { success: false, error: 'API key not provided', status: 401 } } }];\n}\nif (providedKey !== API_KEY) {\n  return [{ json: { ...inputData, authorized: false, error: { success: false, error: 'Invalid API key', status: 401 } } }];\n}\n\nreturn [{ json: { ...inputData, authorized: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -384,
+        80
+      ],
+      "id": "8fc2f149-7108-47b4-8316-bca1c419a62a",
+      "name": "Security Check4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-condition",
+              "leftValue": "={{ $json.authorized }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -192,
+        80
+      ],
+      "id": "8107bef1-f23e-40f0-8e6a-75f39bc948f9",
+      "name": "Auth Check4"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.error }}",
+        "options": {
+          "responseCode": "={{ $json.error.status }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        176
+      ],
+      "id": "94c69718-4772-41b0-bef9-3d790dc1342c",
+      "name": "Error Response4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Security Check4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Insert or update rows in a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert or update rows in a table1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Check4": {
+      "main": [
+        [
+          {
+            "node": "Auth Check4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth Check4": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "",
+  "meta": {
+    "instanceId": "9a2a948e1b1119e76dce477f4f08641c41898f344f4216cb90098437b1dcaf00"
+  },
+  "tags": []
+}
