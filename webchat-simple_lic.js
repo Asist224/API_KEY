@@ -4137,18 +4137,29 @@ stopMonitoring() {
         // (внешние API типа ipapi.co не принимают кастомные заголовки - CORS)
         const apiKey = window.GlobalConfigSettings?.apiKey;
 
-        // Получаем домен webhook'ов из конфига (aiCoreUrl или первый GDPR webhook)
-        const webhookBaseUrl = window.GlobalConfigSettings?.aiCoreUrl ||
-                               window.GlobalConfigSettings?.gdpr?.webhooks?.consent || '';
-        let webhookOrigin = '';
-        try {
-            if (webhookBaseUrl) {
-                webhookOrigin = new URL(webhookBaseUrl).origin;
-            }
-        } catch (e) { /* игнорируем ошибки парсинга */ }
+        // Собираем ВСЕ webhook URL из конфига для извлечения доменов
+        const config = window.GlobalConfigSettings || {};
+        const webhookUrls = [
+            config.aiCoreUrl,
+            config.monitoring?.endpoint,
+            config.gdpr?.webhooks?.consent,
+            config.gdpr?.webhooks?.preChatForm,
+            config.gdpr?.webhooks?.dataAccess,
+            config.gdpr?.webhooks?.dataExport,
+            config.gdpr?.webhooks?.dataDelete,
+            config.gdpr?.webhooks?.consentRevoke
+        ].filter(Boolean);
 
-        // Проверяем, принадлежит ли URL к нашим webhook'ам
-        const isWebhookUrl = webhookOrigin && url.startsWith(webhookOrigin);
+        // Извлекаем уникальные домены (origins) из всех webhook URL
+        const webhookOrigins = new Set();
+        webhookUrls.forEach(webhookUrl => {
+            try {
+                webhookOrigins.add(new URL(webhookUrl).origin);
+            } catch (e) { /* игнорируем невалидные URL */ }
+        });
+
+        // Проверяем, принадлежит ли URL к одному из наших webhook доменов
+        const isWebhookUrl = [...webhookOrigins].some(origin => url.startsWith(origin));
 
         const modifiedOptions = {
             ...options,
