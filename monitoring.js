@@ -257,25 +257,14 @@ async function authFetch(url, options = {}) {
         throw new Error('No authentication token');
     }
 
-    // Добавляем apiKey в body для POST запросов
-    let modifiedOptions = { ...options };
-    if (options.method === 'POST' && options.body) {
-        try {
-            let bodyData = JSON.parse(options.body);
-            bodyData.apiKey = API_KEY;
-            modifiedOptions.body = JSON.stringify(bodyData);
-        } catch (e) {
-            // Если body не JSON, оставляем как есть
-        }
-    }
-
-    // Добавляем токен в заголовки
+    // Добавляем токен и API ключ в заголовки
     const authOptions = {
-        ...modifiedOptions,
+        ...options,
         headers: {
-            ...(modifiedOptions.headers || {}),
+            ...(options.headers || {}),
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-API-Key': API_KEY
         }
     };
 

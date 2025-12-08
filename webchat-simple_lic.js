@@ -762,16 +762,16 @@ class GDPRManager {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-                // Добавляем apiKey к данным
+                // Добавляем apiKey в заголовки
                 const apiKey = window.GlobalConfigSettings?.apiKey;
-                const requestData = apiKey ? { ...data, apiKey } : data;
 
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...(apiKey && { 'X-API-Key': apiKey })
                     },
-                    body: JSON.stringify(requestData),
+                    body: JSON.stringify(data),
                     signal: controller.signal
                 });
 
@@ -4133,20 +4133,15 @@ stopMonitoring() {
     async fetchWithRetry(url, options = {}, maxRetries = 3) {
         let lastError;
 
-        // Автоматически добавляем apiKey в body для POST запросов
-        let modifiedOptions = { ...options };
-        if (options.method === 'POST' && options.body) {
-            try {
-                const apiKey = window.GlobalConfigSettings?.apiKey;
-                if (apiKey) {
-                    let bodyData = JSON.parse(options.body);
-                    bodyData.apiKey = apiKey;
-                    modifiedOptions.body = JSON.stringify(bodyData);
-                }
-            } catch (e) {
-                // Если body не JSON, оставляем как есть
+        // Добавляем API ключ в заголовки
+        const apiKey = window.GlobalConfigSettings?.apiKey;
+        const modifiedOptions = {
+            ...options,
+            headers: {
+                ...(options.headers || {}),
+                ...(apiKey && { 'X-API-Key': apiKey })
             }
-        }
+        };
 
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
