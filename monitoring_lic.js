@@ -267,12 +267,18 @@ function clearAuthToken() {
 async function validateToken(token) {
     try {
         const config = MonitoringConfigManager.getTechnicalSettings();
-        const response = await fetch(config.authValidateEndpoint, {
+        const url = config.authValidateEndpoint;
+
+        // Проверяем, принадлежит ли URL к webhook доменам из конфига
+        const webhookOrigins = getWebhookOrigins();
+        const isWebhookUrl = [...webhookOrigins].some(origin => url.startsWith(origin));
+
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
-                'X-API-Key': config.apiKey
+                ...(isWebhookUrl && config.apiKey && { 'X-API-Key': config.apiKey })
             }
         });
 
@@ -370,11 +376,17 @@ async function handleLogin(event) {
 
     try {
         const config = MonitoringConfigManager.getTechnicalSettings();
-        const response = await fetch(config.authLoginEndpoint, {
+        const url = config.authLoginEndpoint;
+
+        // Проверяем, принадлежит ли URL к webhook доменам из конфига
+        const webhookOrigins = getWebhookOrigins();
+        const isWebhookUrl = [...webhookOrigins].some(origin => url.startsWith(origin));
+
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-Key': config.apiKey
+                ...(isWebhookUrl && config.apiKey && { 'X-API-Key': config.apiKey })
             },
             body: JSON.stringify({ username, password })
         });
@@ -436,6 +448,25 @@ function togglePasswordVisibility() {
 }
 
 /**
+ * Получает уникальные домены (origins) из всех endpoint'ов в конфиге
+ */
+function getWebhookOrigins() {
+    const config = MonitoringConfigManager.getTechnicalSettings();
+    const origins = new Set();
+
+    // Собираем все URL из конфига (все поля заканчивающиеся на Endpoint)
+    Object.keys(config).forEach(key => {
+        if (key.endsWith('Endpoint') && typeof config[key] === 'string') {
+            try {
+                origins.add(new URL(config[key]).origin);
+            } catch (e) { /* игнорируем невалидные URL */ }
+        }
+    });
+
+    return origins;
+}
+
+/**
  * Защищенный fetch с автоматической передачей JWT токена и API ключа
  */
 async function authFetch(url, options = {}) {
@@ -446,14 +477,18 @@ async function authFetch(url, options = {}) {
         throw new Error('No authentication token');
     }
 
-    // Добавляем токен и API ключ в заголовки
+    // Проверяем, принадлежит ли URL к одному из наших webhook доменов
+    const webhookOrigins = getWebhookOrigins();
+    const isWebhookUrl = [...webhookOrigins].some(origin => url.startsWith(origin));
+
+    // Добавляем токен и API ключ в заголовки (API ключ только для webhook'ов из конфига)
     const authOptions = {
         ...options,
         headers: {
             ...(options.headers || {}),
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
-            'X-API-Key': API_KEY
+            ...(isWebhookUrl && API_KEY && { 'X-API-Key': API_KEY })
         }
     };
 
