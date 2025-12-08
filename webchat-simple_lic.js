@@ -4133,13 +4133,15 @@ stopMonitoring() {
     async fetchWithRetry(url, options = {}, maxRetries = 3) {
         let lastError;
 
-        // Добавляем API ключ в заголовки
+        // Добавляем API ключ в заголовки ТОЛЬКО для n8n webhook запросов
+        // (внешние API типа ipapi.co не принимают кастомные заголовки - CORS)
         const apiKey = window.GlobalConfigSettings?.apiKey;
+        const isWebhookUrl = url.includes('n8n.') || url.includes('/webhook');
         const modifiedOptions = {
             ...options,
             headers: {
                 ...(options.headers || {}),
-                ...(apiKey && { 'X-API-Key': apiKey })
+                ...(apiKey && isWebhookUrl && { 'X-API-Key': apiKey })
             }
         };
 
