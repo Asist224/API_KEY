@@ -84,7 +84,8 @@ async function validateToken(token) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'X-API-Key': config.apiKey
             }
         });
 
@@ -186,6 +187,7 @@ async function handleLogin(event) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-API-Key': config.apiKey
             },
             body: JSON.stringify({ username, password })
         });
