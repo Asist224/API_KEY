@@ -543,12 +543,16 @@ class GDPRManager {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+                // Добавляем apiKey к данным
+                const apiKey = window.GlobalConfigSettings?.apiKey;
+                const requestData = apiKey ? { ...data, apiKey } : data;
+
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(data),
+                    body: JSON.stringify(requestData),
                     signal: controller.signal
                 });
 
@@ -1885,6 +1889,9 @@ class GDPRManager {
         if (!url) return null;
 
         try {
+            // Добавляем apiKey к данным
+            const apiKey = window.GlobalConfigSettings?.apiKey;
+
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -1894,6 +1901,7 @@ class GDPRManager {
                     timestamp: new Date().toISOString(),
                     sessionId: this.chat.sessionId,
                     userId: this.getUserId(),
+                    ...(apiKey && { apiKey }),
                     ...data
                 })
             });
@@ -3905,9 +3913,24 @@ stopMonitoring() {
     async fetchWithRetry(url, options = {}, maxRetries = 3) {
         let lastError;
 
+        // Автоматически добавляем apiKey в body для POST запросов
+        let modifiedOptions = { ...options };
+        if (options.method === 'POST' && options.body) {
+            try {
+                const apiKey = window.GlobalConfigSettings?.apiKey;
+                if (apiKey) {
+                    let bodyData = JSON.parse(options.body);
+                    bodyData.apiKey = apiKey;
+                    modifiedOptions.body = JSON.stringify(bodyData);
+                }
+            } catch (e) {
+                // Если body не JSON, оставляем как есть
+            }
+        }
+
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
-                const response = await fetch(url, options);
+                const response = await fetch(url, modifiedOptions);
 
                 // Если запрос успешен, возвращаем результат
                 if (response.ok || response.status < 500) {

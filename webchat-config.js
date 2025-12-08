@@ -168,6 +168,7 @@ const GlobalConfigSettings = {
         speed: 70,
         chunkType: "word"
     },
+    apiKey: "24fs-$r4d-defd-77ds-7eds",
     gdpr: {
         enabled: true,
         mode: "strict",

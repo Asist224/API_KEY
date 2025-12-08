@@ -2123,6 +2123,22 @@
                 <div class="settings-section">
                     <div class="settings-section-header">
                         <h3 class="settings-section-title">
+                            <span>🔑</span> <span data-i18n="api.title">API настройки</span>
+                        </h3>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="api.key_label">API ключ</label>
+                            <input type="text" class="form-control" id="globalApiKey" placeholder="Введите API ключ для защиты вебхуков" data-i18n-placeholder="api.key_placeholder">
+                            <div class="form-hint" data-i18n="api.key_hint">Используется для защиты всех вебхуков системы</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-header">
+                        <h3 class="settings-section-title">
                             <span>🎨</span> <span data-i18n="theme.title">Настройки темы</span>
                         </h3>
                     </div>
@@ -4842,6 +4858,12 @@
                 'global.subtitle': 'Основные параметры системы веб-чата',
                 'global.save_changes': 'Сохранить изменения',
 
+                // API настройки
+                'api.title': 'API настройки',
+                'api.key_label': 'API ключ',
+                'api.key_placeholder': 'Введите API ключ для защиты вебхуков',
+                'api.key_hint': 'Используется для защиты всех вебхуков системы',
+
                 // Переключатель конфигураций
                 'config_switcher.title': 'Переключатель конфигураций',
                 'config_switcher.show': 'Показывать переключатель',
@@ -5699,6 +5721,12 @@
                 'global.title': 'Global Settings',
                 'global.subtitle': 'Main web-chat system parameters',
                 'global.save_changes': 'Save Changes',
+
+                // API Settings
+                'api.title': 'API Settings',
+                'api.key_label': 'API Key',
+                'api.key_placeholder': 'Enter API key for webhook protection',
+                'api.key_hint': 'Used to protect all system webhooks',
 
                 // Config Switcher
                 'config_switcher.title': 'Configuration Switcher',
@@ -8821,6 +8849,13 @@ function collectGlobalSettingsFields() {
     if (switcherToggle) {
         fields.showConfigSwitcher = switcherToggle.classList.contains('active');
         console.log('📝 showConfigSwitcher:', fields.showConfigSwitcher);
+    }
+
+    // API Key
+    const apiKeyInput = document.getElementById('globalApiKey');
+    if (apiKeyInput && apiKeyInput.value) {
+        fields.apiKey = apiKeyInput.value;
+        console.log('📝 apiKey:', fields.apiKey);
     }
 
     // Другие поля на странице глобальных настроек можно добавить здесь
@@ -12103,7 +12138,17 @@ function loadGlobalSettings() {
             defaultConfigSelect.value = defaultValue;
         }
     }
-    
+
+    // ============================================
+    // API НАСТРОЙКИ
+    // ============================================
+
+    // API Key
+    const apiKeyInput = document.getElementById('globalApiKey');
+    if (apiKeyInput && settings.apiKey) {
+        apiKeyInput.value = settings.apiKey;
+    }
+
     // ============================================
     // НАСТРОЙКИ ТЕМЫ
     // ============================================

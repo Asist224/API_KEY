@@ -2,6 +2,9 @@
 // СИСТЕМА АУТЕНТИФИКАЦИИ
 // =====================================================
 
+// Получаем API ключ из конфига для защиты вебхуков
+const API_KEY = MonitoringConfigManager.getTechnicalSettings().apiKey;
+
 /**
  * Проверка наличия действительного токена при загрузке страницы
  */
@@ -244,7 +247,7 @@ function togglePasswordVisibility() {
 }
 
 /**
- * Защищенный fetch с автоматической передачей JWT токена
+ * Защищенный fetch с автоматической передачей JWT токена и API ключа
  */
 async function authFetch(url, options = {}) {
     const token = getAuthToken();
@@ -254,11 +257,23 @@ async function authFetch(url, options = {}) {
         throw new Error('No authentication token');
     }
 
+    // Добавляем apiKey в body для POST запросов
+    let modifiedOptions = { ...options };
+    if (options.method === 'POST' && options.body) {
+        try {
+            let bodyData = JSON.parse(options.body);
+            bodyData.apiKey = API_KEY;
+            modifiedOptions.body = JSON.stringify(bodyData);
+        } catch (e) {
+            // Если body не JSON, оставляем как есть
+        }
+    }
+
     // Добавляем токен в заголовки
     const authOptions = {
-        ...options,
+        ...modifiedOptions,
         headers: {
-            ...(options.headers || {}),
+            ...(modifiedOptions.headers || {}),
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
         }

@@ -829,7 +829,8 @@ const MonitoringConfig = {
         "detectHighlightsEndpoint": "https://n8n.cryptomator.pro/webhook/detect-highlights",
         "getHighlightsEndpoint": "https://n8n.cryptomator.pro/webhook/get-highlights",
         "authLoginEndpoint": "https://n8n.cryptomator.pro/webhook/auth-login",
-        "authValidateEndpoint": "https://n8n.cryptomator.pro/webhook/auth-validate"
+        "authValidateEndpoint": "https://n8n.cryptomator.pro/webhook/auth-validate",
+        "apiKey": "24fs-$r4d-defd-77ds-7eds"
     }
 };
 
