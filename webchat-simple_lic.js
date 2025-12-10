@@ -2108,19 +2108,19 @@ class GDPRManager {
         if (!url) return null;
 
         try {
-            // Добавляем apiKey к данным
+            // Добавляем apiKey в заголовки (X-API-Key)
             const apiKey = window.GlobalConfigSettings?.apiKey;
 
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...(apiKey && { 'X-API-Key': apiKey })
                 },
                 body: JSON.stringify({
                     timestamp: new Date().toISOString(),
                     sessionId: this.chat.sessionId,
                     userId: this.getUserId(),
-                    ...(apiKey && { apiKey }),
                     ...data
                 })
             });
@@ -4137,17 +4137,29 @@ stopMonitoring() {
         // (внешние API типа ipapi.co не принимают кастомные заголовки - CORS)
         const apiKey = window.GlobalConfigSettings?.apiKey;
 
-        // Собираем ВСЕ webhook URL из конфига для извлечения доменов
-        const config = window.GlobalConfigSettings || {};
+        // Собираем ВСЕ webhook URL из ОБОИХ конфигов (GlobalConfigSettings и this.config)
+        const globalConfig = window.GlobalConfigSettings || {};
+        const instanceConfig = this.config || {};
         const webhookUrls = [
-            config.aiCoreUrl,
-            config.monitoring?.endpoint,
-            config.gdpr?.webhooks?.consent,
-            config.gdpr?.webhooks?.preChatForm,
-            config.gdpr?.webhooks?.dataAccess,
-            config.gdpr?.webhooks?.dataExport,
-            config.gdpr?.webhooks?.dataDelete,
-            config.gdpr?.webhooks?.consentRevoke
+            // Из GlobalConfigSettings
+            globalConfig.aiCoreUrl,
+            globalConfig.gdpr?.webhooks?.consent,
+            globalConfig.gdpr?.webhooks?.preChatForm,
+            globalConfig.gdpr?.webhooks?.dataAccess,
+            globalConfig.gdpr?.webhooks?.dataExport,
+            globalConfig.gdpr?.webhooks?.dataDelete,
+            globalConfig.gdpr?.webhooks?.consentRevoke,
+            // Из this.config (WebChatConfig)
+            instanceConfig.aiCoreUrl,
+            instanceConfig.monitoring?.endpoint,
+            instanceConfig.gdpr?.webhooks?.consent,
+            instanceConfig.gdpr?.webhooks?.preChatForm,
+            instanceConfig.gdpr?.webhooks?.dataAccess,
+            instanceConfig.gdpr?.webhooks?.dataExport,
+            instanceConfig.gdpr?.webhooks?.dataDelete,
+            instanceConfig.gdpr?.webhooks?.consentRevoke,
+            // Также проверяем monitoringEndpoint если установлен
+            this.monitoringEndpoint
         ].filter(Boolean);
 
         // Извлекаем уникальные домены (origins) из всех webhook URL
