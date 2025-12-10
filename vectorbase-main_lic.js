@@ -57,6 +57,23 @@ function clearAuthToken() {
 }
 
 /**
+ * Получить origins всех webhook URL из конфига
+ */
+function getWebhookOrigins() {
+    const origins = new Set();
+
+    // Добавляем baseUrl из конфига
+    const baseUrl = VectorBaseConfig.technical?.baseUrl;
+    if (baseUrl) {
+        try {
+            origins.add(new URL(baseUrl).origin);
+        } catch (e) { /* игнорируем невалидные URL */ }
+    }
+
+    return origins;
+}
+
+/**
  * Валидация токена на сервере
  */
 async function validateToken(token) {
@@ -64,13 +81,18 @@ async function validateToken(token) {
         const baseUrl = VectorBaseConfig.technical.baseUrl;
         const endpoint = VectorBaseConfig.technical.endpoints.authValidate;
         const apiKey = VectorBaseConfig.technical.apiKey;
+        const url = `${baseUrl}${endpoint}`;
 
-        const response = await fetch(`${baseUrl}${endpoint}`, {
+        // Проверяем, принадлежит ли URL к webhook доменам из конфига
+        const webhookOrigins = getWebhookOrigins();
+        const isWebhookUrl = [...webhookOrigins].some(origin => url.startsWith(origin));
+
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
-                ...(apiKey && { 'X-API-Key': apiKey })
+                ...(isWebhookUrl && apiKey && { 'X-API-Key': apiKey })
             }
         });
 
@@ -171,12 +193,17 @@ async function handleLogin(event) {
         const baseUrl = VectorBaseConfig.technical.baseUrl;
         const endpoint = VectorBaseConfig.technical.endpoints.authLogin;
         const apiKey = VectorBaseConfig.technical.apiKey;
+        const url = `${baseUrl}${endpoint}`;
 
-        const response = await fetch(`${baseUrl}${endpoint}`, {
+        // Проверяем, принадлежит ли URL к webhook доменам из конфига
+        const webhookOrigins = getWebhookOrigins();
+        const isWebhookUrl = [...webhookOrigins].some(origin => url.startsWith(origin));
+
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...(apiKey && { 'X-API-Key': apiKey })
+                ...(isWebhookUrl && apiKey && { 'X-API-Key': apiKey })
             },
             body: JSON.stringify({ username, password })
         });
