@@ -7916,6 +7916,7 @@ this.sendMonitoringData('message');
                 language: this.currentLanguage || this.config.language || 'ru',
                 configName: this.currentConfigName,
                 apiUrl: this.config.aiCoreUrl,  // ✅ URL из конфига - Worker будет использовать
+                apiKey: window.GlobalConfigSettings?.apiKey || null, // ✅ API ключ для X-API-Key header
                 maxLength: this.config.technical?.maxMessageLength || 1000,
                 userAgent: navigator.userAgent,
                 pageUrl: window.location.href,
