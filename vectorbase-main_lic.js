@@ -63,12 +63,14 @@ async function validateToken(token) {
     try {
         const baseUrl = VectorBaseConfig.technical.baseUrl;
         const endpoint = VectorBaseConfig.technical.endpoints.authValidate;
-        
+        const apiKey = VectorBaseConfig.technical.apiKey;
+
         const response = await fetch(`${baseUrl}${endpoint}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                ...(apiKey && { 'X-API-Key': apiKey })
             }
         });
 
@@ -168,11 +170,13 @@ async function handleLogin(event) {
     try {
         const baseUrl = VectorBaseConfig.technical.baseUrl;
         const endpoint = VectorBaseConfig.technical.endpoints.authLogin;
-        
+        const apiKey = VectorBaseConfig.technical.apiKey;
+
         const response = await fetch(`${baseUrl}${endpoint}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                ...(apiKey && { 'X-API-Key': apiKey })
             },
             body: JSON.stringify({ username, password })
         });
