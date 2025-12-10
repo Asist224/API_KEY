@@ -2111,13 +2111,6 @@ class GDPRManager {
             // Добавляем apiKey в заголовки (X-API-Key)
             const apiKey = window.GlobalConfigSettings?.apiKey;
 
-            // DEBUG: логируем для отладки
-            console.log('🔑 GDPRManager.sendWebhook debug:', {
-                url,
-                apiKey: apiKey ? '***' + apiKey.slice(-4) : 'undefined',
-                hasGlobalConfig: !!window.GlobalConfigSettings
-            });
-
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -4179,17 +4172,6 @@ stopMonitoring() {
 
         // Проверяем, принадлежит ли URL к одному из наших webhook доменов
         const isWebhookUrl = [...webhookOrigins].some(origin => url.startsWith(origin));
-
-        // DEBUG: логируем для отладки (можно удалить после исправления)
-        if (url.includes('webhook') || url.includes('n8n')) {
-            console.log('🔑 fetchWithRetry debug:', {
-                url,
-                apiKey: apiKey ? '***' + apiKey.slice(-4) : 'undefined',
-                isWebhookUrl,
-                webhookOriginsCount: webhookOrigins.size,
-                webhookOrigins: [...webhookOrigins]
-            });
-        }
 
         const modifiedOptions = {
             ...options,
